@@ -1,16 +1,21 @@
-/**
- * LIORA P0.30 — transport Telegram Bot API (server-only).
- *
- * Warstwa zna wyłącznie HTTP Telegrama: wysyłkę wiadomości i rejestrację
- * webhooka. Nie zna rezerwacji, statystyk ani ról. NIGDY nie rzuca i nigdy nie
- * loguje treści wiadomości ani tokenu — w logu zostaje tylko kod błędu.
- */
-import { botToken, type TelegramBot } from "./config.server";
+import { botToken as rawToken, type TelegramBot } from "./config.server";
 import { allowTelegramCall } from "./rate-limit.server";
 
 const API = "https://api.telegram.org";
-/** Telegram tnie wiadomości powyżej 4096 znaków. */
 const MAX_LENGTH = 3900;
+
+function getToken(bot?: any): string {
+  const t: any = rawToken as any;
+  if (typeof t === 'function') {
+    try { const v = t(bot); if (v && typeof v === 'string') return v; } catch {}
+    try { const v = t(); if (v && typeof v === 'string') return v; } catch {}
+  }
+  try {
+    const s = typeof t === 'string' ? t : t?.toString?.();
+    if (s && s.length > 10 && !s.includes('function') && !s.includes('Proxy') && !s.includes('[object')) return s;
+  } catch {}
+  return "";
+}
 
 export interface TelegramSendResult {
   sent: boolean;
@@ -22,7 +27,7 @@ async function call(
   method: string,
   payload: Record<string, unknown>,
 ): Promise<{ ok: boolean; status: number }> {
-  const token = botToken(bot);
+  const token = getToken(bot);
   if (!token) return { ok: false, status: 0 };
   try {
     const response = await fetch(`${API}/bot${token}/${method}`, {
@@ -41,15 +46,13 @@ export async function sendTelegramMessage(
   chatId: string | number,
   text: string,
 ): Promise<TelegramSendResult> {
-  if (!botToken(bot)) return { sent: false, reason: "not_configured" };
+  if (!getToken(bot)) return { sent: false, reason: "not_configured" };
   if (!allowTelegramCall(`${bot}:${chatId}`)) return { sent: false, reason: "rate_limited" };
-
   const result = await call(bot, "sendMessage", {
     chat_id: chatId,
     text: text.slice(0, MAX_LENGTH),
     disable_web_page_preview: true,
   });
-
   if (!result.ok) {
     console.warn(`[telegram] ${bot} sendMessage failed status=${result.status}`);
     return { sent: false, reason: "transport_error" };
@@ -57,9 +60,8 @@ export async function sendTelegramMessage(
   return { sent: true };
 }
 
-/** Weryfikacja tokenu bez wysyłania czegokolwiek do ludzi. */
 export async function checkTelegramBot(bot: TelegramBot): Promise<boolean> {
-  if (!botToken(bot)) return false;
+  if (!getToken(bot)) return false;
   return (await call(bot, "getMe", {})).ok;
 }
 
