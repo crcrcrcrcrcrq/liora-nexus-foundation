@@ -2,7 +2,9 @@ type AnyClient = any;
 function createMockQuery() {
   const mock: any = {
     data: null, error: null,
-    from: () => mock, select: () => mock, eq: () => mock,
+    from: () => mock,
+    select: () => mock,
+    eq: () => mock,
     single: async () => ({ data: null, error: null }),
     maybeSingle: async () => ({ data: null, error: null }),
     insert: async () => ({ data: null, error: null }),
