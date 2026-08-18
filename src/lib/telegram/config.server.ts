@@ -1,4 +1,3 @@
-// FIX dla Cloudflare Workers - BEZ $env/dynamic/private
 function get(key: string): string {
   try {
     // @ts-ignore
@@ -8,7 +7,7 @@ function get(key: string): string {
     }
   } catch {}
   try {
-    // @ts-ignore - Cloudflare env
+    // @ts-ignore
     const g = globalThis as any;
     if (g && g.process && g.process.env && g.process.env[key]) return g.process.env[key];
     if (g && g[key]) return g[key];
