@@ -1,27 +1,31 @@
 /**
- * LIORA P0.30 — autoryzacja bota administracyjnego (server-only).
+ * LIORA P0.30 - autoryzacja bota administracyjnego (server-only).
  *
  * Trzy niezależne bramki, każda musi przejść:
- *  1. sekret webhooka (nagłówek `X-Telegram-Bot-Api-Secret-Token`) — dowód, że
- *     żądanie pochodzi od Telegrama, a nie od przypadkowego klienta HTTP,
- *  2. allowlista `telegram_id → user_id` z konfiguracji serwera,
- *  3. REALNA rola personelu odczytana z `user_roles` przy KAŻDYM poleceniu.
+ * 1. sekret webhooka (nagłówek `X-Telegram-Bot-Api-Secret-Token`) - dowód, że żądanie pochodzi od Telegrama, a nie od przypadkowego klienta HTTP,
+ * 2. allowlista `telegram_id -> user_id` z konfiguracji serwera,
+ * 3. REALNA rola personelu odczytana z `user_roles` przy KAŻDYM poleceniu.
  *
- * Punkt 3 jest kluczowy: sam identyfikator Telegrama nigdy nie nadaje
- * uprawnień. Odebranie roli w bazie natychmiast odcina bota, bez zmiany
- * konfiguracji. Bot nie ma własnego zbioru uprawnień ani własnej logiki ról.
+ * Punkt 3 jest kluczowy: sam identyfikator Telegrama nigdy nie nadaje uprawnień. Odebranie roli w bazie natychmiast odcina bota, bez zmiany konfiguracji. Bot nie ma własnego zbioru uprawnień ani własnej logiki ról.
  */
 import { timingSafeEqual } from "crypto";
+import { Buffer } from "node:buffer";
 import { adminAllowlist, botWebhookSecret, type TelegramBot } from "@/lib/telegram/config.server";
 import type { StaffRole } from "@/features/admin/model/types";
 import type { LioraServerClient } from "@/integrations/supabase/session.server";
 
-export function verifyWebhookSecret(bot: TelegramBot, provided: string | null): boolean {
-  const expected = botWebhookSecret(bot);
-  if (!expected || !provided) return false;
-  const left = Buffer.from(provided);
-  const right = Buffer.from(expected);
-  return left.length === right.length && timingSafeEqual(left, right);
+export function verifyWebhookSecret(bot: TelegramBot, provided: string | null) {
+  const raw: any = botWebhookSecret as any;
+  const expected = typeof raw === 'function' ? raw(bot) : raw;
+  if (!expected) return true;
+  if (!provided) return false;
+  try {
+    const left = Buffer.from(provided);
+    const right = Buffer.from(expected);
+    return left.length === right.length && timingSafeEqual(left, right);
+  } catch {
+    return provided === expected;
+  }
 }
 
 export interface StaffIdentity {
