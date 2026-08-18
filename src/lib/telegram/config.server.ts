@@ -1,61 +1,39 @@
-function get(key: string): string {
-  try {
-    // @ts-ignore
-    if (typeof process!== 'undefined' && (process as any).env && (process as any).env[key]) {
+import { get } from "some-env-lib-or-process-env";
+
+function getEnv(name: string): string {
+  // @ts-ignore
+  return (typeof process!== 'undefined'? process.env?.[name] : undefined) || (globalThis as any).__env?.[name] || "";
+}
+
+function createGetter(envName: string, fallbackEnv?: string) {
+  const fn = (bot?: any) => getEnv(envName) || (fallbackEnv? getEnv(fallbackEnv) : "") || "";
+  // @ts-ignore sprawia że działa jako string i jako funkcja
+  const proxy = new Proxy(fn, {
+    apply(_t, _this, args) { return fn(args[0]); },
+    get(_t, prop) {
+      if (prop === 'toString' || prop === Symbol.toPrimitive || prop === 'valueOf') {
+        return () => fn();
+      }
       // @ts-ignore
-      return (process as any).env[key];
+      return (fn as any)[prop];
     }
-  } catch {}
-  try {
-    // @ts-ignore
-    const g = globalThis as any;
-    if (g && g.process && g.process.env && g.process.env[key]) return g.process.env[key];
-    if (g && g[key]) return g[key];
-  } catch {}
-  return '';
+  });
+  return proxy as any;
 }
 
-export const botToken = get('TELEGRAM_BOT_TOKEN') || get('BOT_TOKEN') || '';
-export const BOT_TOKEN = botToken;
+export const botToken = createGetter("BOT_TOKEN", "TELEGRAM_BOT_TOKEN");
+export const botWebhookSecret = createGetter("TELEGRAM_BOT_WEBHOOK_SECRET", "BOT_WEBHOOK_SECRET");
 
-export const botWebhookSecret = get('TELEGRAM_BOT_WEBHOOK_SECRET') || get('BOT_WEBHOOK_SECRET') || '';
-export const BOT_WEBHOOK_SECRET = botWebhookSecret;
-
-export const adminId = get('TELEGRAM_ADMIN_ID') || '';
-export const TELEGRAM_ADMIN_ID = adminId;
-
-export const adminAllowlist = (get('ADMIN_ALLOWLIST') || get('TELEGRAM_ADMIN_ID') || '').split(',').filter(Boolean);
-export const statsAllowlist = (get('STATS_ALLOWLIST') || get('TELEGRAM_ADMIN_ID') || '').split(',').filter(Boolean);
-
-export const SUPABASE_URL = get('SUPABASE_URL') || '';
-export const SUPABASE_ANON_KEY = get('SUPABASE_ANON_KEY') || '';
-
-export const serverConfig = {
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  TELEGRAM_BOT_TOKEN: botToken,
-  TELEGRAM_WEBHOOK_SECRET: botWebhookSecret,
-  TELEGRAM_ADMIN_ID: adminId,
-  BOT_TOKEN: botToken,
-};
-
-export const supabaseConfig = {
-  url: SUPABASE_URL,
-  anonKey: SUPABASE_ANON_KEY,
-};
-
-export const telegramConfig = {
-  token: botToken,
-  webhookSecret: botWebhookSecret,
-  adminId: adminId,
-};
-
-// FIX: Zwracamy string, nie funkcję pl()
-export function botLanguage(): string {
-  const lang = get('BOT_LANGUAGE');
-  if (lang) return lang;
-  return 'pl';
+export function adminAllowlist() {
+  const raw = getEnv("TELEGRAM_ADMIN_ID") || getEnv("ADMIN_ALLOWLIST") || "";
+  const map = new Map<string, string>();
+  if (!raw) return map;
+  // format: "12345:userId" lub samo "12345"
+  raw.split(",").forEach(entry => {
+    const [tgId, userId] = entry.split(":").map(s => s.trim());
+    if (tgId) map.set(tgId, userId || tgId);
+  });
+  return map;
 }
 
-// FIX: Dummy pl żeby nie wywalało "pl is not a function" jeśli gdzieś jest import pl
-export const pl = 'pl';
+export type TelegramBot = any;
