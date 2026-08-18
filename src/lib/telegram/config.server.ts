@@ -37,11 +37,8 @@ function makeGetter(...names: string[]) {
   }) as any;
 }
 
-export const botToken = makeGetter("BOT_TOKEN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TOKEN");
-export const botWebhookSecret = makeGetter("TELEGRAM_BOT_WEBHOOK_SECRET", "BOT_WEBHOOK_SECRET", "TELEGRAM_WEBHOOK_SECRET", "WEBHOOK_SECRET");
-
-export function adminAllowlist(): Map<string, string> {
-  const raw = readEnv("TELEGRAM_ADMIN_ID") || readEnv("ADMIN_ALLOWLIST") || readEnv("ADMIN_IDS") || "";
+function makeAllowlist(...envNames: string[]): Map<string, string> {
+  const raw = envNames.map(readEnv).find(Boolean) || "";
   const map = new Map<string, string>();
   if (!raw) return map;
   raw.split(",").forEach(entry => {
@@ -56,3 +53,20 @@ export function adminAllowlist(): Map<string, string> {
   });
   return map;
 }
+
+// GŁÓWNE - te co już masz
+export const botToken = makeGetter("BOT_TOKEN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TOKEN");
+export const botWebhookSecret = makeGetter("TELEGRAM_BOT_WEBHOOK_SECRET", "BOT_WEBHOOK_SECRET", "TELEGRAM_WEBHOOK_SECRET", "WEBHOOK_SECRET");
+export const botLanguage = makeGetter("BOT_LANGUAGE", "TELEGRAM_BOT_LANGUAGE", "LANGUAGE");
+
+export function adminAllowlist(): Map<string, string> {
+  return makeAllowlist("TELEGRAM_ADMIN_ID", "ADMIN_ALLOWLIST", "ADMIN_IDS");
+}
+
+export function statsAllowlist(): Map<string, string> {
+  return makeAllowlist("TELEGRAM_STATS_ID", "STATS_ALLOWLIST", "ADMIN_ALLOWLIST", "TELEGRAM_ADMIN_ID");
+}
+
+// aliasy żeby nic więcej nie krzyczało MISSING_EXPORT
+export const adminIds = adminAllowlist;
+export const statsIds = statsAllowlist;
