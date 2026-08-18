@@ -15,7 +15,7 @@ export async function handleAdminCommand(message: TelegramMessage) {
   const adminIdNum = Number(telegramConfig.adminId || 0);
   const fromId = message.from?.id || 0;
 
-  if (adminIdNum && fromId!== adminIdNum) {
+  if (adminIdNum && fromId != adminIdNum) {
     return { text: 'Brak dostepu' };
   }
 
