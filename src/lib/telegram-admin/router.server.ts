@@ -1,33 +1,40 @@
 import { telegramConfig, botLanguage } from '../telegram/config.server';
 
-type TelegramMessage = {
-  text?: string;
-  chat: { id: number };
-  from?: { id: number };
-};
+export async function routeAdminCommand(update: any) {
+  try {
+    const text = update?.message?.text || '';
+    const chatId = update?.message?.chat?.id || 0;
 
-export async function handleAdminCommand(message: TelegramMessage) {
-  const text = message.text?.trim() || '';
-  const adminIdNum = Number(telegramConfig.adminId || 0);
-  const fromId = message.from?.id || 0;
+    // FIX: bezpieczne pobranie języka - nie wywołujemy pl()
+    let lang = 'pl';
+    try {
+      const l = botLanguage();
+      if (typeof l === 'string') lang = l;
+    } catch {
+      lang = 'pl';
+    }
 
-  if (adminIdNum && fromId != adminIdNum) {
-    return { text: 'Brak dostepu' };
+    if (text.startsWith('/start')) {
+      return `🚀 Liora OS DZIALA!\nLang: ${lang}\nChat: ${chatId}`;
+    }
+
+    if (text.startsWith('/admin') || text.startsWith('/status')) {
+      return `👑 Admin OK\nLang: ${lang}\nBot: ACTIVE\nID: ${chatId}`;
+    }
+
+    if (!text) return 'OK';
+    
+    return `Otrzymano: ${text} [${lang}]`;
+  } catch (e) {
+    console.error('routeAdminCommand error', e);
+    return 'OK - blad obsluzony';
   }
+}
 
-  const lang = botLanguage();
-
-  if (text.startsWith('/start')) {
-    return { text: 'Panel admin Liora - Bot dziala! Lang: ' + lang };
-  }
-
-  if (text.startsWith('/status')) {
-    return { text: 'Bot dziala Lang: ' + lang + ' Admin: ' + (adminIdNum || 'brak') };
-  }
-
-  return { text: 'Nieznana komenda: ' + text };
+export async function handleAdminUpdate(update: any) {
+  return routeAdminCommand(update);
 }
 
 export function createAdminRouter() {
-  return { handle: handleAdminCommand };
+  return { route: routeAdminCommand };
 }
