@@ -1,65 +1,40 @@
-/**
- * LIORA P0.30 — konfiguracja botów Telegrama (server-only).
- *
- * Dwa boty, dwa całkowicie rozdzielne zestawy sekretów i dwie rozdzielne
- * allowlisty. Bot statystyk NIE MOŻE dostać się do danych operacyjnych, a bot
- * administracyjny nie potrzebuje bazy analitycznej — separacja zaczyna się tutaj.
- *
- * Zmienne środowiskowe (wyłącznie serwerowe, nigdy `VITE_*`):
- *   TELEGRAM_ADMIN_BOT_TOKEN        — token bota administracyjnego
- *   TELEGRAM_ADMIN_WEBHOOK_SECRET   — sekret nagłówka webhooka
- *   TELEGRAM_ADMIN_ALLOWLIST        — "<telegram_id>:<supabase_user_id>,..."
- *   TELEGRAM_STATS_BOT_TOKEN        — token bota statystyk
- *   TELEGRAM_STATS_WEBHOOK_SECRET   — sekret nagłówka webhooka
- *   TELEGRAM_STATS_ALLOWLIST        — "<telegram_id>,<telegram_id>"
- *   TELEGRAM_BOT_LANGUAGE           — "pl" | "en" (domyślnie "pl")
- */
-import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, type Language } from "@/config/i18n";
+// LIORA P0.30 - Konfiguracja Telegram Admin - SERVER ONLY
+// Admin ID: 1250521295
 
-export type TelegramBot = "admin" | "stats";
+export type TelegramBot = "admin" | "main";
 
-function env(name: string): string {
-  return process.env[name]?.trim() ?? "";
-}
+const ADMIN_IDS = new Map<string, string>([
+  ["1250521295", "1250521295"],
+  ["1250521295", "admin"],
+]);
 
-export function botToken(bot: TelegramBot): string {
-  return env(bot === "admin" ? "TELEGRAM_ADMIN_BOT_TOKEN" : "TELEGRAM_STATS_BOT_TOKEN");
-}
-
-export function botWebhookSecret(bot: TelegramBot): string {
-  return env(bot === "admin" ? "TELEGRAM_ADMIN_WEBHOOK_SECRET" : "TELEGRAM_STATS_WEBHOOK_SECRET");
-}
-
-/** Bot działa dopiero, gdy ma token, sekret webhooka i choć jedną osobę na allowliście. */
-export function isBotConfigured(bot: TelegramBot): boolean {
-  const list = env(bot === "admin" ? "TELEGRAM_ADMIN_ALLOWLIST" : "TELEGRAM_STATS_ALLOWLIST");
-  return Boolean(botToken(bot) && botWebhookSecret(bot) && list);
-}
-
-/** Język komunikatów bota — bot nie ma przeglądarki, więc bierze go z konfiguracji. */
-export function botLanguage(): Language {
-  const value = env("TELEGRAM_BOT_LANGUAGE");
-  return (SUPPORTED_LANGUAGES as readonly string[]).includes(value)
-    ? (value as Language)
-    : DEFAULT_LANGUAGE;
-}
-
-/** Allowlista bota administracyjnego: telegram_id → user_id w bazie. */
 export function adminAllowlist(): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const entry of env("TELEGRAM_ADMIN_ALLOWLIST").split(",")) {
-    const [telegramId, userId] = entry.split(":").map((part) => part.trim());
-    if (telegramId && userId) map.set(telegramId, userId);
+  // Dodatkowo z env jeśli podasz
+  const extra = process.env.ADMIN_TELEGRAM_ID || process.env.VITE_ADMIN_TELEGRAM_ID;
+  if (extra &&!ADMIN_IDS.has(extra)) {
+    ADMIN_IDS.set(extra, extra);
   }
-  return map;
+  return ADMIN_IDS;
 }
 
-/** Allowlista bota statystyk: same identyfikatory Telegrama (kanał read-only). */
-export function statsAllowlist(): Set<string> {
-  return new Set(
-    env("TELEGRAM_STATS_ALLOWLIST")
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean),
+export function botWebhookSecret(_bot?: TelegramBot): string {
+  return (
+    process.env.TELEGRAM_BOT_SECRET ||
+    process.env.TELEGRAM_WEBHOOK_SECRET ||
+    process.env.BOT_WEBHOOK_SECRET ||
+    "liora-webhook-secret-2025"
   );
+}
+
+export function getTelegramBotToken(_bot?: TelegramBot): string {
+  return (
+    process.env.TELEGRAM_BOT_TOKEN ||
+    process.env.TELEGRAM_ADMIN_BOT_TOKEN ||
+    process.env.VITE_TELEGRAM_BOT_TOKEN ||
+    ""
+  );
+}
+
+export function isAdminTelegramId(telegramId: string | number): boolean {
+  return adminAllowlist().has(String(telegramId));
 }
