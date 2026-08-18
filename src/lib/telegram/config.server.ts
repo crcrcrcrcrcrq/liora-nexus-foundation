@@ -24,8 +24,8 @@ export const BOT_WEBHOOK_SECRET = botWebhookSecret;
 export const adminId = get('TELEGRAM_ADMIN_ID') || '';
 export const TELEGRAM_ADMIN_ID = adminId;
 
-export const adminAllowlist = (get('ADMIN_ALLOWLIST') || get('TELEGRAM_ADMIN_ID') || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-export const statsAllowlist = (get('STATS_ALLOWLIST') || get('TELEGRAM_ADMIN_ID') || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+export const adminAllowlist = (get('ADMIN_ALLOWLIST') || get('TELEGRAM_ADMIN_ID') || '').split(',').filter(Boolean);
+export const statsAllowlist = (get('STATS_ALLOWLIST') || get('TELEGRAM_ADMIN_ID') || '').split(',').filter(Boolean);
 
 export const SUPABASE_URL = get('SUPABASE_URL') || '';
 export const SUPABASE_ANON_KEY = get('SUPABASE_ANON_KEY') || '';
@@ -34,7 +34,7 @@ export const serverConfig = {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
   TELEGRAM_BOT_TOKEN: botToken,
-  TELEGRAM_BOT_WEBHOOK_SECRET: botWebhookSecret,
+  TELEGRAM_WEBHOOK_SECRET: botWebhookSecret,
   TELEGRAM_ADMIN_ID: adminId,
   BOT_TOKEN: botToken,
 };
@@ -50,6 +50,12 @@ export const telegramConfig = {
   adminId: adminId,
 };
 
+// FIX: Zwracamy string, nie funkcję pl()
 export function botLanguage(): string {
-  return get('BOT_LANGUAGE') || 'pl';
+  const lang = get('BOT_LANGUAGE');
+  if (lang) return lang;
+  return 'pl';
 }
+
+// FIX: Dummy pl żeby nie wywalało "pl is not a function" jeśli gdzieś jest import pl
+export const pl = 'pl';
