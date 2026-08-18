@@ -1,4 +1,4 @@
-import { telegramConfig, botLanguage } from '../telegram/config.server.ts';
+import { telegramConfig, botLanguage } from '../telegram/config.server';
 
 function t() {
   return (key: string) => key;
@@ -12,22 +12,22 @@ type TelegramMessage = {
 
 export async function handleAdminCommand(message: TelegramMessage) {
   const text = message.text?.trim() || '';
-  const adminId = Number(telegramConfig.adminId || 0);
+  const adminIdNum = Number(telegramConfig.adminId || 0);
   const fromId = message.from?.id || 0;
 
-  if (adminId && fromId !== adminId) {
+  if (adminIdNum && fromId!== adminIdNum) {
     return { text: 'Brak dostepu' };
   }
 
   if (text.startsWith('/start')) {
-    return { text: 'Panel admin Liora - Bot dziala!' };
+    return { text: 'Panel admin Liora - Bot dziala! Lang: ' + botLanguage() };
   }
 
   if (text.startsWith('/status')) {
-    return { text: `Bot dziala Lang: ${botLanguage()} Admin: ${adminId || 'brak'}` };
+    return { text: 'Bot dziala Lang: ' + botLanguage() + ' Admin: ' + (adminIdNum || 'brak') };
   }
 
-  return { text: `Nieznana komenda: ${text}` };
+  return { text: 'Nieznana komenda: ' + text };
 }
 
 export function createAdminRouter() {
