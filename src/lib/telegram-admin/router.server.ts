@@ -1,9 +1,5 @@
 import { telegramConfig, botLanguage } from '../telegram/config.server';
 
-function t() {
-  return (key: string) => key;
-}
-
 type TelegramMessage = {
   text?: string;
   chat: { id: number };
@@ -19,12 +15,14 @@ export async function handleAdminCommand(message: TelegramMessage) {
     return { text: 'Brak dostepu' };
   }
 
+  const lang = botLanguage();
+
   if (text.startsWith('/start')) {
-    return { text: 'Panel admin Liora - Bot dziala! Lang: ' + botLanguage() };
+    return { text: 'Panel admin Liora - Bot dziala! Lang: ' + lang };
   }
 
   if (text.startsWith('/status')) {
-    return { text: 'Bot dziala Lang: ' + botLanguage() + ' Admin: ' + (adminIdNum || 'brak') };
+    return { text: 'Bot dziala Lang: ' + lang + ' Admin: ' + (adminIdNum || 'brak') };
   }
 
   return { text: 'Nieznana komenda: ' + text };
