@@ -1,4 +1,3 @@
-// src/services/api.ts - fixed for Cloudflare build
 export const API_ROUTES = {
   contact: '/api/contact',
   astrology: '/api/astrology',
@@ -6,41 +5,37 @@ export const API_ROUTES = {
   admin: '/api/admin',
   auth: '/api/auth',
   telegram: '/api/telegram',
+  messages: '/api/messages',
+  horoscope: '/api/horoscope',
 } as const;
 
-type ApiOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  body?: any;
-  headers?: Record<string, string>;
-};
+async function safeJson(res: Response) {
+  try {
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) return await res.json();
+    return await res.text();
+  } catch { return null; }
+}
 
-async function request<T = any>(url: string, options: ApiOptions = {}): Promise<T> {
-  const res = await fetch(url, {
-    method: options.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(text || `Request failed: ${res.status}`);
+async function request<T = any>(url: string, init: RequestInit = {}): Promise<T> {
+  try {
+    const res = await fetch(url, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...(init.headers||{}) },
+    });
+    const data = await safeJson(res);
+    return (data ?? {}) as T;
+  } catch (e) {
+    console.warn('API offline:', url, e);
+    return {} as T;
   }
-  const ct = res.headers.get('content-type') || '';
-  if (ct.includes('application/json')) return (await res.json()) as T;
-  return (await res.text()) as unknown as T;
 }
 
 export const api = {
-  get: <T = any>(url: string, headers?: Record<string, string>) => 
-    request<T>(url, { method: 'GET', headers }),
-  post: <T = any>(url: string, body?: any, headers?: Record<string, string>) => 
-    request<T>(url, { method: 'POST', body, headers }),
-  put: <T = any>(url: string, body?: any, headers?: Record<string, string>) => 
-    request<T>(url, { method: 'PUT', body, headers }),
-  delete: <T = any>(url: string, headers?: Record<string, string>) => 
-    request<T>(url, { method: 'DELETE', headers }),
+  get: <T=any>(url: string) => request<T>(url),
+  post: <T=any>(url: string, body?: any) => request<T>(url, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T=any>(url: string, body?: any) => request<T>(url, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T=any>(url: string) => request<T>(url, { method: 'DELETE' }),
 };
 
 export default api;
