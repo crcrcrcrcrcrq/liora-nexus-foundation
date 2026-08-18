@@ -1,3 +1,6 @@
+/**
+ * LIORA P0.30 — transport Telegram Bot API (server-only).
+ */
 import { botToken as rawToken, type TelegramBot } from "./config.server";
 import { allowTelegramCall } from "./rate-limit.server";
 
@@ -48,11 +51,13 @@ export async function sendTelegramMessage(
 ): Promise<TelegramSendResult> {
   if (!getToken(bot)) return { sent: false, reason: "not_configured" };
   if (!allowTelegramCall(`${bot}:${chatId}`)) return { sent: false, reason: "rate_limited" };
+
   const result = await call(bot, "sendMessage", {
     chat_id: chatId,
     text: text.slice(0, MAX_LENGTH),
     disable_web_page_preview: true,
   });
+
   if (!result.ok) {
     console.warn(`[telegram] ${bot} sendMessage failed status=${result.status}`);
     return { sent: false, reason: "transport_error" };
