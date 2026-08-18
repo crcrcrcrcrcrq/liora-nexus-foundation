@@ -5,7 +5,6 @@ function readEnv(name: string): string {
     const g = globalThis as any;
     if (g?.[name]) return String(g[name]);
     if (g?.env?.[name]) return String(g.env[name]);
-    if (g?.process?.env?.[name]) return String(g.process.env[name]);
   } catch {}
   try {
     // @ts-ignore
@@ -37,36 +36,27 @@ function makeGetter(...names: string[]) {
   }) as any;
 }
 
-function makeAllowlist(...envNames: string[]): Map<string, string> {
+function makeMap(...envNames: string[]): Map<string, string> {
   const raw = envNames.map(readEnv).find(Boolean) || "";
   const map = new Map<string, string>();
   if (!raw) return map;
-  raw.split(",").forEach(entry => {
-    const e = entry.trim();
-    if (!e) return;
-    if (e.includes(":")) {
-      const [tgId, userId] = e.split(":").map(s => s.trim());
-      if (tgId) map.set(tgId, userId || tgId);
-    } else {
-      map.set(e, e);
-    }
+  raw.split(",").forEach(e => {
+    const s = e.trim(); if (!s) return;
+    if (s.includes(":")) { const [a,b]=s.split(":").map(x=>x.trim()); if(a) map.set(a,b||a); }
+    else map.set(s,s);
   });
   return map;
 }
 
-// GŁÓWNE - te co już masz
-export const botToken = makeGetter("BOT_TOKEN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TOKEN");
-export const botWebhookSecret = makeGetter("TELEGRAM_BOT_WEBHOOK_SECRET", "BOT_WEBHOOK_SECRET", "TELEGRAM_WEBHOOK_SECRET", "WEBHOOK_SECRET");
-export const botLanguage = makeGetter("BOT_LANGUAGE", "TELEGRAM_BOT_LANGUAGE", "LANGUAGE");
+export const botToken = makeGetter("BOT_TOKEN","TELEGRAM_BOT_TOKEN","TELEGRAM_TOKEN");
+export const botWebhookSecret = makeGetter("TELEGRAM_BOT_WEBHOOK_SECRET","BOT_WEBHOOK_SECRET","TELEGRAM_WEBHOOK_SECRET","WEBHOOK_SECRET");
+export const botLanguage = makeGetter("BOT_LANGUAGE","TELEGRAM_BOT_LANGUAGE","LANGUAGE");
 
 export function adminAllowlist(): Map<string, string> {
-  return makeAllowlist("TELEGRAM_ADMIN_ID", "ADMIN_ALLOWLIST", "ADMIN_IDS");
+  return makeMap("TELEGRAM_ADMIN_ID","ADMIN_ALLOWLIST","ADMIN_IDS");
 }
-
 export function statsAllowlist(): Map<string, string> {
-  return makeAllowlist("TELEGRAM_STATS_ID", "STATS_ALLOWLIST", "ADMIN_ALLOWLIST", "TELEGRAM_ADMIN_ID");
+  return makeMap("TELEGRAM_STATS_ID","STATS_ALLOWLIST","ADMIN_ALLOWLIST","TELEGRAM_ADMIN_ID");
 }
-
-// aliasy żeby nic więcej nie krzyczało MISSING_EXPORT
 export const adminIds = adminAllowlist;
 export const statsIds = statsAllowlist;
